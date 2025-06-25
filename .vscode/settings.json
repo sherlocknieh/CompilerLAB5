@@ -1,0 +1,26 @@
+{
+    "files.associations": {
+        "*.lex": "c",
+        "*.common": "makefile",
+        "*.parv": "ini",
+        "*.outv": "ini",
+        "*.l": "c",
+        "*.y": "c",
+        "typeinfo": "c",
+        "type_traits": "c",
+        "compare": "c",
+        "cstdlib": "c",
+        "ctype.h": "c",
+        "stdio.h": "c",
+        "stdlib.h": "c",
+        "malloc.h": "c",
+        "stddef.h": "c",
+        "string.h": "c",
+        "clang.tab.h": "c",
+        "clang.h": "c",
+        "io.h": "c",
+        "unistd.h": "c",
+        "common.h": "c",
+        "y.tab.h": "c"
+    }
+}
