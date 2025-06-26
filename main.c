@@ -15,11 +15,12 @@ int main()
     CreateConstList(1000);
     
     printf("[INFO] 创建符号表\t: 地址从 2000 开始\n");
-    TopSymbolList = CreateSymbolList( NULL, 2000 );
+    TheSymbolList = CreateSymbolList( NULL, 2000 );
     
 
     printf("\n[INFO] 开始解析:\n\n");
     printf("词法分析: \t| 语法分析:\n");
+
 
     yyparse();
 
@@ -31,17 +32,12 @@ int main()
     printf("[INFO] 四元式表已写入 %s 文件\n", destfile);
     WriteQuadTableToFile( destfile );
     
-    if( CompileFailed == 0 ) 
+    if( error_flag == 0 ) 
 	    printf("[INFO] 翻译成功!\n");
-	else
-	    printf("[INFO] 翻译失败!\n" );
-
-    // printf("[INFO] 释放资源\n");
-    // fclose(yyin);
-    // DestroyQuadTable();
-    // DestroyConstList();
-    // DestroySymbolList(TopSymbolList);
-
+	else {
+	    printf("[ERROR] 翻译失败!\n" );
+        printf("[ERROR] 第 %d 行出错\n", error_flag);
+    }
     return 0;
 }
 
