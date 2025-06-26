@@ -1,9 +1,8 @@
 %{
 #include "common.h"
-int CompileFailed = 0;            /*编译失败标记*/
-SymbolList TopSymbolList = NULL;  /*符号表指针*/
-struct ConstList ConstList;       /*常量表*/
-struct QuadTable QuadTable;       /*四元式表*/
+extern SymbolListPtr TheSymbolList;  // 符号表指针
+extern struct ConstList TheConstList ;     // 常量表
+extern struct QuadTable TheQuadTable;      // 四元式表
 %}
 
 %token BASIC
@@ -33,19 +32,19 @@ struct QuadTable QuadTable;       /*四元式表*/
 
 %%
 function : BASIC ID '(' ')' block   { printf("\t\t| function\t: BASIC ID ( ) block\n"); }
-;
 
 block   : '{' blockM1 decls stmts blockM2 '}'   { printf("\t\t| block\t: {decls stmts}\n"); }
 ;
 
-blockM1 :   { TopSymbolList = CreateSymbolList( TopSymbolList, TopSymbolList->endaddr ); }
+blockM1 :   {   printf("[INFO] 进入新的作用域, 创建符号表\n");
+                TheSymbolList = CreateSymbolList( TheSymbolList, TheSymbolList->endaddr ); }
 ;
 
-blockM2 :   { SymbolList env;
-    PrintSymbolList( TopSymbolList);
-    env = TopSymbolList->prev;
-    DestroySymbolList( TopSymbolList );
-    TopSymbolList = env;
+blockM2 :   { SymbolListPtr env;
+    PrintSymbolList( TheSymbolList);
+    env = TheSymbolList->prev;
+    DestroySymbolList( TheSymbolList );
+    TheSymbolList = env;
     }
 ;
 
@@ -62,7 +61,7 @@ decl    : type ID ';'         { int width;
                                     case BOOL  : width = BOOL_WIDTH;  break;
                                     default    : width = -1; break;
                                 }
-                                AddToSymbolList( TopSymbolList, $2.id.name, $1.basic.type, width );
+                                AddToSymbolList( TheSymbolList, $2.id.name, $1.basic.type, width );
                               }
 ;
 
@@ -104,11 +103,13 @@ rel   :  expr LT expr   	{ printf("\t\t| rel\t: expr LT expr\n"); }
 
 expr  : expr '+' term       { printf("\t\t| expr\t: expr + term\n"); }
       | expr '-' term       { printf("\t\t| expr\t: expr - term\n"); }
-      | term                { printf("\t\t| expr\t: term\n");
-                                strcpy( $$.expr.str, $1.term.str );
-                                $$.expr.type = $1.term.type;
-                                $$.expr.addr = $1.term.addr;
-                                $$.expr.width = $1.term.width;}
+      | term            {
+                            printf("\t\t| expr\t: term\n");
+                            strcpy( $$.expr.str, $1.term.str );
+                            $$.expr.type = $1.term.type;
+                            $$.expr.addr = $1.term.addr;
+                            $$.expr.width = $1.term.width;
+                        }
 ;
 
 term  : term '*' factor  { printf("\t\t| term\t: term * factor\n"); }
@@ -122,6 +123,17 @@ term  : term '*' factor  { printf("\t\t| term\t: term * factor\n"); }
                 $$.term.width = $1.factor.width;}
 ;
 
+factor  
+: '-' factor %prec UMINUS {
+    char temp_str[16];
+    int temp_addr = NewTemp( TheSymbolList, temp_str, $2.factor.width ); /*新增临时变量*/
+    printf("\t\t| factor\t: -factor\n");
+    strcpy( $$.factor.str, temp_str);
+    $$.factor.type  = $2.expr.type;
+    $$.factor.addr  = temp_addr;
+    $$.factor.width = $2.expr.width;
+}
+
 factor: '(' expr ')'
 {
     printf("\t\t| factor\t: (expr)\n" );
@@ -129,44 +141,43 @@ factor: '(' expr ')'
     $$.factor.type  = $2.expr.type;
     $$.factor.addr  = $2.expr.addr;
     $$.factor.width = $2.expr.width;
-}
-
-factor: ID
-{
-    struct SymbolElem * p;
-    printf("\t\t| factor\t: ID\n");
-    p = LookUpAllSymbolList( TopSymbolList, $1.id.name );
-    if( p != NULL ) {
-            strcpy( $$.factor.str, p->name );
-            $$.factor.type  = p->type;
-            $$.factor.addr  = p->addr;
-            $$.factor.width = p->width;
-    }
-    else {
-            yyerror( "变量名没有定义" );
-            strcpy( $$.factor.str, "no_id_defined" ); /*容错处理*/
-            $$.factor.type = INT;
-            $$.factor.addr = -1;
-            $$.factor.width = INT_WIDTH;
-    }
 };
 
-factor: CONST
-{
-    printf("\t\t| factor\t: CONST\n");
-    struct ConstElem * p; // 创建常量指针
-    p = LookUpConstList( $1.constval.type, $1.constval.value, $1.constval.width );
-    if( p == NULL )
-    p = AddToConstList( $1.constval.str, $1.constval.type, $1.constval.value, $1.constval.width );
+| ID {
+    printf("\t\t| factor\t: ID\n");
+    struct Symbol * p;
+    p = LookUpAllSymbolList( TheSymbolList, $1.id.name );
+    if( p != NULL ) {
+        strcpy( $$.factor.str, p->name );
+        $$.factor.type  = p->type;
+        $$.factor.addr  = p->addr;
+        $$.factor.width = p->width;
+    }
+    else {
+        char msg[128];
+        sprintf(msg, "变量 \"%s\" 未定义", $1.id.name);
+        yyerror(msg);
+        /*容错处理*/
+        strcpy( $$.factor.str, "no_id_defined" );
+        $$.factor.type = INT;
+        $$.factor.addr = -1;
+        $$.factor.width = INT_WIDTH;
+    }
+}
 
+| CONST {
+    printf("\t\t| factor\t: CONST\n");
+    // 查找常量表
+    struct ConstElem * p;
+    p = LookUpConstList( $1.constval.type, $1.constval.value, $1.constval.width );
+    // 该常量不存在, 则添加到常量表
+    if( p == NULL )
+        p = AddToConstList( $1.constval.str, $1.constval.type, $1.constval.value, $1.constval.width );
+    // 归约传值
     strcpy( $$.factor.str, $1.constval.str );
     $$.factor.type  = $1.constval.type;
     $$.factor.addr  = p->addr;
     $$.factor.width = p->width;
-};
-
-factor: '-' factor %prec UMINUS
-{
-    printf("\t\t| factor\t: -factor\n");
-};
+}
+;
 %%

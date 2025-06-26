@@ -1,12 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>    // for malloc and free
-#include <string.h>    // for memset
-#include <ctype.h>     // for isdigit and isalpha
+#include <stdio.h>     // for printf, sprintf
+#include <stdlib.h>    // for malloc, free
+#include <string.h>    // for strcpy, memset
 
-
-extern FILE *yyin;          /*输入文件*/
-extern int LineNo;          /*当前行号*/
-extern int CompileFailed;   /*编译是否失败*/
 
 
 #define CHAR     1
@@ -22,45 +17,52 @@ extern int CompileFailed;   /*编译是否失败*/
 #define ID_MAX_LEN  64
 
 
+
+/**********************公用变量声明**********************/
+extern int error_flag;                  // 失败标记
+extern int line_num;                    // 当前行号
+extern FILE *yyin;                      // 输入文件指针, 具体定义在 Flex 生成的 lex.yy.c 中
+
+
+/**********************公用函数声明**********************/
 int yylex(void);
 int yyparse(void);
-void yyerror( char * ErrStr );
+void yyerror(char * err_msg);
 
 
 /*****************************符号表结构定义*******************************/
-
 /*符号节点*/
-struct SymbolElem {
+struct Symbol {
     char name[ ID_MAX_LEN + 1 ]; /*符号名(例如变量名)长度不超过 ID_MAX_LEN 个字符*/
     int  type;      /*类型名，例如 int, 这个程序只处理简单类型，在实际的编译器中，这里要建立树结构*/
     int  addr;      /*为该变量分配的空间的首地址*/
 	int  width;     /*该变量的宽度，即占用多少个字节*/
-    struct SymbolElem * next;  /*指向下一个标识符*/
+    struct Symbol * next;  /*指向下一个标识符*/
 };
 
 /*符号表*/
-typedef struct SymbolList{
-    struct SymbolElem * head;   /*指向符号表（用链表实现）的第一个结点，没有头结点,初始化为NULL*/
+typedef struct SymbolList {
+    struct Symbol * head;   /*指向符号表（用链表实现）的第一个结点，没有头结点,初始化为NULL*/
     struct SymbolList * prev;   /*上一层的符号表*/
     int beginaddr;              /*该符号表中分配给变量和临时变量空间的开始地址*/
     int endaddr;                /*该符号表中分配给变量和临时变量空间的结束地址*/
-} * SymbolList;
+}* SymbolListPtr;
 
-/*符号表指针*/
-extern SymbolList TopSymbolList;
 
 /*符号表操作*/
-SymbolList CreateSymbolList( SymbolList PrevList, int StartAddr ); /*创建符号表*/
-struct SymbolElem * LookUpSymbolList( SymbolList List, char * IdName ); /*查找符号*/
-struct SymbolElem * LookUpAllSymbolList( SymbolList List, char * IdName ); /*在所有上级符号表中查找符号*/
-struct SymbolElem * AddToSymbolList( SymbolList List, char * IdName, int IdType, int Width ); /*添加符号*/
-int NewTemp( SymbolList List, char Name[], int Width ); /*添加临时变量*/
-void DestroySymbolList( SymbolList List );  /*销毁符号表*/
-void PrintSymbolList( SymbolList List );    /*打印符号表*/
+SymbolListPtr CreateSymbolList( SymbolListPtr PrevList, int StartAddr ); /*创建符号表*/
+struct Symbol * LookUpSymbolList( SymbolListPtr List, char * IdName ); /*查找符号*/
+struct Symbol * LookUpAllSymbolList( SymbolListPtr List, char * IdName ); /*在所有上级符号表中查找符号*/
+struct Symbol * AddToSymbolList( SymbolListPtr List, char * IdName, int IdType, int Width ); /*添加符号*/
+int NewTemp( SymbolListPtr List, char Name[], int Width ); /*添加临时变量*/
+void DestroySymbolList( SymbolListPtr List );  /*销毁符号表*/
+void PrintSymbolList( SymbolListPtr List );    /*打印符号表*/
+
+
+
 
 
 /*****************************常量表结构定义*******************************/
-
 /*常量值*/
 union ConstVal {
         char    ch;    /*存放字符常量*/
@@ -83,12 +85,8 @@ struct ConstList{
     struct ConstElem * head;  /*指向常量表（用链表实现）的第一个结点，没有头结点,初始化为NULL*/
     int beginaddr;  /*该符号表中分配给常量空间的开始地址*/
     int endaddr;    /*该符号表中分配给常量空间的结束地址*/
-                   /*beginaddr~endaddr的空间存放该常量表的所有常量*/
-};  /*常量表，全局变量，注意整个程序只需要一个常量表*/
+};
 
-
-/*常量表指针*/
-extern struct ConstList ConstList ; 
 
 
 /*常量表操作函数*/
@@ -103,7 +101,6 @@ struct ConstElem * AddToConstList( char * Str, int ConstType, union ConstVal Con
 
 
 /*****************************四元式表结构定义*******************************/
-
 /* 操作码定义 */
 /* 整型加减乘除 */
 #define OIntAdd          1001
@@ -154,10 +151,7 @@ struct Quadruple {
     int op; /*运算符*/
     int arg1; /*存放第一个参数的地址，可能是变量、临时变量的地址*/
     int arg2;
-    int arg3;/*存放第三个参数的地址，可能是变量、临时变量的地址，还可能是四元式的地址(Goto 的地址参数)*/
-    char arg1name[ID_MAX_LEN + 1]; /*本不需要，用于演示时能显示arg1对应的变量或临时变量的名称(若有的话）*/
-    char arg2name[ID_MAX_LEN + 1]; /*本不需要，用于演示时能显示arg2对应的变量或临时变量的名称(若有的话）*/
-    char arg3name[ID_MAX_LEN + 1]; /*本不需要，用于演示时能显示arg3对应的变量或临时变量的名称(若有的话）*/
+    int arg3; /*存放第三个参数的地址，可能是变量、临时变量的地址，还可能是四元式的地址(Goto 的地址参数)*/
 };
 
 /*四元式表*/
@@ -166,24 +160,19 @@ struct QuadTable {
     struct Quadruple * base; /*指向一块内存，用来存放多个四元式，从base[0]开始存放*/
     int size; /*base中可以存放的四元式的个数*/
     int len; /*base[len]是下一个四元式要存放的空间*/
-
 };
 
-/*四元式表指针*/
-extern struct QuadTable QuadTable;
-
-
 /*四元式操作函数*/
-void CreateQuadTable(int StartAddr); /*创建四元式表*/
-void DestroyQuadTable( void ); /*销毁四元式表*/
+void CreateQuadTable(int StartAddr);    /*创建四元式表*/
+void DestroyQuadTable( void );          /*销毁四元式表*/
 void WriteQuadTableToFile( const char * FileName ); /*将四元式表输出到文件*/
-int Gen( int Op, int Arg1, int Arg2, int Arg3, char *Arg1Name, char *Arg2Name, char *Arg3Name ); /*生成一个四元式，并返回它的地址*/
+int Gen(int Op, int Arg1, int Arg2, int Arg3); /*生成一个四元式到四元式表，并返回它的地址*/
 
 
 
 
-/**************属性栈数据结构定义****************/
 
+/****************************属性栈元素结构定义******************************/
 union ParseStackNodeInfo{
     struct {
         char name[ID_MAX_LEN + 1 ]; 
@@ -206,8 +195,8 @@ union ParseStackNodeInfo{
 	   int addr;
 	   int width;
 	} factor, term, expr;/*非终结符factor, term, expr的综合属性*/
-        /*其它文法符号的属性记录可以在下面继续添加*/
-} ;
+    /*其它文法符号的属性记录可以在下面继续添加*/
+};
 
 #define YYSTYPE union ParseStackNodeInfo 
-
+/*****************************************************************************/

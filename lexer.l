@@ -1,7 +1,6 @@
 %{
-#include "common.h"     // 公共头文件，包含各种常量别名, yylval 结构定义和其它数据结构
-#include "y.tab.h"      // Bison 生成的头文件，包含 token 定义和 yylval 的声明
-int LineNo = 1;         // 用于记录当前行号
+#include "common.h"     // 公共头文件，包含各种常量, yylval 结构定义和其它数据结构
+#include "y.tab.h"      // Bison 生成的头文件，包含 token 编码定义和 yylval 的声明
 %}
 
 
@@ -15,7 +14,7 @@ character   "'"."'"
 %%
 {comment}   {    /*注释*/     }
 [" "\t]+    {    /*空白符*/   }
-"\n"        {    LineNo++;    }
+"\n"        {    line_num++;    }
 "//".*      
 if          {    printf("IF \t: %s\t|\n", yytext);    return (IF);    }
 else        {    printf("ELSE \t: %s\t|\n", yytext);  return (ELSE);  }

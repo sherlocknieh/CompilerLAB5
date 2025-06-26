@@ -20,10 +20,11 @@ int main()
     ch = ch + i;
 
     /* 控制流 */
-
     while (i <= 100)
     {
-        sum = sum + i;
+        int j;
+        j = 5;
+        sum = sum + j;
         if (i < 50)
             i = i + 2;
         else
