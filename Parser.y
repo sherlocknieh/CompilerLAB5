@@ -43,16 +43,19 @@ blockM1 :   {   printf("[INFO] 进入新的作用域, 创建符号表\n");
                 TheSymbolList = CreateSymbolList( TheSymbolList, TheSymbolList->endaddr ); }
 ;
 
-blockM2 :   { SymbolListPtr env;
+blockM2 :   {
+    SymbolListPtr env;
     PrintSymbolList( TheSymbolList);
     env = TheSymbolList->prev;
     DestroySymbolList( TheSymbolList );
     TheSymbolList = env;
-    }
-;
+};
+
+
+/*声明语句*/
 
 decls   :   decls decl          { printf("\t\t| decls\t: decls decl\n"); }
-        | /*empty*/           { printf("\t\t| decls\t: null\n"); }
+        | /*empty*/             { printf("\t\t| decls\t: null\n"); }
 ;
 
 decl    :   type ID ';'         { int width;
@@ -71,6 +74,10 @@ decl    :   type ID ';'         { int width;
 type    :   BASIC                 { printf("\t\t| type\t: BASIC\n"); $$.basic.type = $1.basic.type; }
 ;
 
+
+
+/* 过程语句 */
+
 stmts   :   stmts stmt            { printf("\t\t| stmts\t: stmts stmt\n");}
         |   /*empty*/             { printf("\t\t| stmts\t: null\n");}
 ;
@@ -80,6 +87,7 @@ stmt    :   IF '(' bool ')' stmt ELSE stmt   { printf("\t\t| stmt\t: IF (bool) s
 stmt    :   WHILE '(' bool ')' stmt          { printf("\t\t| stmt\t: WHILE (bool) stmt\n"); }
 stmt    :   DO stmt WHILE '(' bool ')' ';'   { printf("\t\t| stmt\t: DO stmt WHILE (bool) ;\n"); }
 stmt    :   block                            { printf("\t\t| stmt\t: block\n"); }
+stmt    :   assign                           { printf("\t\t| stmt\t: assign\n"); }
 ;
 
 bool    :   bool OR join                     { printf("\t\t| bool\t: bool OR join\n"); }
@@ -100,12 +108,13 @@ rel     :   expr LT expr   	{ printf("\t\t| rel\t: expr LT expr\n"); }
 rel     :   expr LE expr   	{ printf("\t\t| rel\t: expr LE expr\n"); }
 rel     :   expr GT expr   	{ printf("\t\t| rel\t: expr GT expr\n"); }
 rel     :   expr GE expr   	{ printf("\t\t| rel\t: expr GE expr\n"); }
-rel     :   expr               { printf("\t\t| rel\t: expr\n"); }
+rel     :   expr            { printf("\t\t| rel\t: expr\n"); }
 ;
 
 
 /* 赋值语句 */
-stmt    :   ID '=' expr ';'  {
+
+assign    :   ID '=' expr ';'  {
     // 查找符号表
     struct Symbol * p;
     p = LookUpAllSymbolList( TheSymbolList, $1.id.name );
@@ -120,11 +129,9 @@ stmt    :   ID '=' expr ';'  {
     // ID 存在
     // 四元式
     int qaddr = GenQuadruple( OIntEvaluation, $3.expr.addr, 0, p->addr, $3.expr.str, "", $1.id.name);
-    //归约
-    printf("\t\t| stmt\t: ID = expr ;\n");
+    // 归约
+    printf("\t\t| assign\t: ID = expr ;\n");
 };
-
-
 
 /* 算术表达式 */
 expr    :   expr '+' term  {
