@@ -11,22 +11,22 @@ $(TARGET): y.tab.c lex.yy.c common.c main.c
 
 
 # 生成语法分析器
-y.tab.c y.tab.h: Parser.y
-	bison -yd Parser.y
+y.tab.c y.tab.h: parser.y
+	bison -yd parser.y
 
 
 # 生成词法分析器
-lex.yy.c: Scanner.l y.tab.h
-	flex Scanner.l
+lex.yy.c: lexer.l y.tab.h
+	flex lexer.l
 
 
 run: $(TARGET)
-	./$(TARGET) code.txt
+	./$(TARGET) code.c
 
 
 clean:
 ifeq ($(SHELL), CMD)
-	del lex.yy.c *.tab.* codegen.txt $(TARGET).exe
+	del lex.yy.c *.tab.* code.txt $(TARGET).exe
 else
-	rm -f lex.yy.c *.tab.* codegen.txt $(TARGET)
+	rm -f lex.yy.c *.tab.* code.txt $(TARGET)
 endif

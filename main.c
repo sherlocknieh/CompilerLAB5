@@ -3,40 +3,44 @@
 
 int main()
 {
-    yyin = fopen("code-input.txt", "r");   // 打开输入文件
-    char destfile[] = "code-output.txt";   // 输出文件路径
+    char inputfile[] = "code.c";      // 输入文件路径
+    char destfile[]  = "code.txt";    // 输出文件路径
 
-    printf("[INFO] 创建常量表,假设从地址3000开始分配空间\n");
-    CreateConstList(3000);
-    
-    printf("[INFO] 创建符号表,假定从地址2000开始分配空间\n");
-    TopSymbolList = CreateSymbolList( NULL, 2000 );
-    
-    printf("[INFO] 创建四元式表,假定四元式从地址100开始存放\n");
+    printf("\n[INFO] 打开输入文件\t: %s\n", inputfile);
+    yyin = fopen(inputfile, "r");
+    printf("[INFO] 创建四元式表\t: 地址从 100 开始\n");
     CreateQuadTable(100);
 
-    printf("[INFO] 开始解析\n");
-    printf("词法分析 \t\t 语法分析\n");
+    printf("[INFO] 创建常量表\t: 地址从 1000 开始\n");
+    CreateConstList(1000);
+    
+    printf("[INFO] 创建符号表\t: 地址从 2000 开始\n");
+    TopSymbolList = CreateSymbolList( NULL, 2000 );
+    
+
+    printf("\n[INFO] 开始解析:\n\n");
+    printf("词法分析: \t| 语法分析:\n");
+
     yyparse();
 
+    
+    printf("\n[INFO] 解析结束\n");
+    printf("[INFO] 打印常量表\n");
     PrintConstList();
 
-    printf("[INFO] 把四元式表写入 %s 文件\n", destfile);
+    printf("[INFO] 四元式表已写入 %s 文件\n", destfile);
     WriteQuadTableToFile( destfile );
-    DestroyQuadTable();
-
-    printf("[INFO] 销毁符号表\n");
-    DestroySymbolList(TopSymbolList);
-    printf("[INFO] 销毁常量表\n");
-    DestroyConstList();
-
-    printf("[INFO] 关闭输入文件\n");
-    fclose(yyin);
-
+    
     if( CompileFailed == 0 ) 
-	    printf("[INFO] 翻译成功\n");
+	    printf("[INFO] 翻译成功!\n");
 	else
-	    printf("[INFO] 翻译失败\n" );
+	    printf("[INFO] 翻译失败!\n" );
+
+    // printf("[INFO] 释放资源\n");
+    // fclose(yyin);
+    // DestroyQuadTable();
+    // DestroyConstList();
+    // DestroySymbolList(TopSymbolList);
 
     return 0;
 }

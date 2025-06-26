@@ -1,15 +1,16 @@
 # 文件说明
+```
+- lexer.l  : 词法分析脚本
+- parser.y : 语法分析脚本
 
-- Scanner.l : 词法分析脚本
-- Parser.y  : 语法分析脚本
-
-- main.c : 主程序
+- main.c   : 主程序
 
 - common.h : 数据结构和函数声明
 - common.c : 函数实现
 
-- code.txt  : 测试用例
-- codegen.txt : 中间代码
+- code.c   : 测试代码
+- code.txt : 生成代码
+```
 
 # 运行:
 
@@ -17,7 +18,7 @@ make run
 
 # 运行结果
 
-见 codegen.txt
+见 code.txt
 
 # 难点
 

@@ -1,16 +1,17 @@
 #include "common.h"
 
 
-int yywrap(){ return 1; } // 词法分析器的结束函数, 返回1表示结束;
+/**************Flex & Bison 需要的函数*****************/
+int yywrap(){ return 1; }      // 词法分析器结束函数
 
-void yyerror( char * ErrStr )
+void yyerror( char * ErrStr )  // 自定义报错信息格式
 {
-    CompileFailed = 1; /*编译失败标志*/
-    printf("错误信息:%s, 行号:%d\n", ErrStr, LineNo);
+    CompileFailed = 1;         // 编译失败标志
+    printf("行号: %d; 错误信息: %s\n", LineNo, ErrStr);
 }
 
 
-/*创建并返回一个新的符号表（SymbolList就是书上的Env），PrevList是其的上一层符号表*/
+/**********************符号表操作**********************/
 SymbolList CreateSymbolList( SymbolList PrevList, int StartAddr )
 { SymbolList list;
     list = (SymbolList) malloc( sizeof(struct SymbolList) );
@@ -20,19 +21,6 @@ SymbolList CreateSymbolList( SymbolList PrevList, int StartAddr )
     return list;
 }
 
-void DestroySymbolList( SymbolList List )
-{
-    struct SymbolElem * p, *q;
-    
-    if( List == NULL) return;
-    p = List->head;
-    while( p!=NULL ) {
-        q = p->next; free(p); p=q;
-    }
-    free(List);    
-}
-
-/*在符号表List中查找是否存在标识符IdName，如果存在，则返回该结点指针，否则返回空*/
 struct SymbolElem * LookUpSymbolList( SymbolList List, char * IdName )
 {
     struct SymbolElem * p;
@@ -42,7 +30,6 @@ struct SymbolElem * LookUpSymbolList( SymbolList List, char * IdName )
     return p;
 }
 
-/*从符号表List开始并不断地往上一层符号表中查找是否存在标识符IdName，如果存在，则返回该结点指针，否则返回空*/
 struct SymbolElem * LookUpAllSymbolList( SymbolList List, char * IdName )
 {
     SymbolList env;
@@ -56,7 +43,6 @@ struct SymbolElem * LookUpAllSymbolList( SymbolList List, char * IdName )
     return NULL;
 }
 
-/*创建一个新的符号结点,并添加到符号表中，而后返回该结点指针*/
 struct SymbolElem * AddToSymbolList( SymbolList List, char * IdName,int IdType, int Width )
 {
     struct SymbolElem * p;
@@ -75,26 +61,37 @@ struct SymbolElem * AddToSymbolList( SymbolList List, char * IdName,int IdType, 
     return p;    
 }
 
+void DestroySymbolList( SymbolList List )
+{
+    struct SymbolElem * p, *q;
+    
+    if( List == NULL) return;
+    p = List->head;
+    while( p!=NULL ) {
+        q = p->next; free(p); p=q;
+    }
+    free(List);    
+}
+
 void PrintSymbolList( SymbolList List )
 {
     struct SymbolElem * p;
-    printf("\n***********************变量表*************************\n");
+    printf("\n*********************当前符号表***********************\n");
     if( List ==NULL ) return ;
     for( p=List->head; p!=NULL; p=p->next ) {
-        printf("变量名:%s, \t类型:", p->name);
+        printf("变量名:%s \t类型:", p->name);
 		switch( p->type ) {
             case CHAR : printf("char");  break;
             case INT  : printf("int");   break;
             case FLOAT: printf("float"); break;
             case BOOL : printf("bool");  break;
 		}
-        printf(", \t地址:%d, \t宽度:%d\n", p->addr, p->width );
+        printf(" \t地址:%d \t宽度:%d\n", p->addr, p->width );
 	}
-    printf("******************共占用%d个字节空间*******************\n\n", List->endaddr - List->beginaddr);
+    printf("*****************共占用%2d个字节空间*******************\n\n", List->endaddr - List->beginaddr);
 }
 
-/*分配一个临时变量,返回临时变量的地址、临时变量的名称*/
-int NewTemp( SymbolList List, char Name[], int Width )
+int NewTemp( SymbolList List, char Name[], int Width )  /*创建临时变量*/
 {
     static int TempID = 1;
     int addr;
@@ -105,7 +102,8 @@ int NewTemp( SymbolList List, char Name[], int Width )
 }
 
 
-/*创建并返回常量表*/
+
+/**********************常量表操作**********************/
 void CreateConstList( int StartAddr )
 { 
 	ConstList.head = NULL;
@@ -122,7 +120,23 @@ void DestroyConstList( void )
 	memset( &ConstList, 0, sizeof(struct ConstList) );
 }
 
-/*在常量表ConstList中查找是否存在常量，如果存在，则返回该结点指针，否则返回空*/
+void PrintConstList(void)
+{
+    struct ConstElem * p;
+    printf("\n***********************常量表*************************\n");
+    for( p=ConstList.head; p!=NULL; p=p->next ) {
+	    printf("常量:%s  \t类型:", p->str);
+		switch( p->type ) {
+            case CHAR : printf("char");  break;
+            case INT  : printf("int");   break;
+            case FLOAT: printf("float"); break;
+            case BOOL : printf("bool");  break;
+		}
+        printf(" \t地址:%d \t宽度:%d\n", p->addr, p->width );
+	}
+    printf("******************共占用%2d个字节空间******************\n\n", ConstList.endaddr - ConstList.beginaddr);
+}
+
 struct ConstElem * LookUpConstList( int ConstType, union ConstVal ConstValue, int Width )
 {
     struct ConstElem * p;
@@ -131,8 +145,6 @@ struct ConstElem * LookUpConstList( int ConstType, union ConstVal ConstValue, in
     return p;
 }
 
-
-/*创建一个新的常数结点,并添加到常数表中，而后返回该结点指针*/
 struct ConstElem * AddToConstList( char * Str, int ConstType, union ConstVal ConstValue, int Width )
 {
     struct ConstElem * p;
@@ -152,26 +164,9 @@ struct ConstElem * AddToConstList( char * Str, int ConstType, union ConstVal Con
     return p;    
 }
 
-void PrintConstList(void)
-{
-    struct ConstElem * p;
-    printf("\n***********************常量列表*************************\n");
-    for( p=ConstList.head; p!=NULL; p=p->next ) {
-	    printf("常量:%s, \t类型:", p->str);
-		switch( p->type ) {
-            case CHAR : printf("char");  break;
-            case INT  : printf("int");   break;
-            case FLOAT: printf("float"); break;
-            case BOOL : printf("bool");  break;
-		}
-        printf(", \t地址:%d, \t宽度:%d\n", p->addr, p->width );
-	}
-    printf("*********************共占用%d个字节空间******************\n\n", ConstList.endaddr - ConstList.beginaddr);
-}
 
 
-
-
+/**********************四元式表操作**********************/
 void CreateQuadTable(int StartAddr)
 {
     QuadTable.startaddr = StartAddr; 
@@ -188,31 +183,6 @@ void DestroyQuadTable( void )
     QuadTable.len = 0;   
 }
 
-/*当Arg1是变量或临时变量时，Arg1Name是该变量的名称,用于演示时使用，其余参数类同 */
-int Gen( int Op, int Arg1, int Arg2, int Arg3, char *Arg1Name, char *Arg2Name, char *Arg3Name )
-{
-    struct Quadruple * ptr; 
-    int incr = 100;
-    if( QuadTable.len >= QuadTable.size ) {
-        ptr = realloc( QuadTable.base, QuadTable.size+incr );
-        if( ptr==NULL ) return -1;
-        QuadTable.base = ptr;
-        QuadTable.size += incr;
-    }
-    ptr = & QuadTable.base[QuadTable.len];
-    ptr->op = Op;
-    ptr->arg1 = Arg1;
-    ptr->arg2 = Arg2;
-    ptr->arg3 = Arg3;
-    strcpy( ptr->arg1name, Arg1Name);
-    strcpy( ptr->arg2name, Arg2Name);
-    strcpy( ptr->arg3name, Arg3Name);
-    QuadTable.len++;
-
-    return QuadTable.len - 1;
-}
-
-/*把四元式所对应的三地址代码写入到文件中*/
 void WriteQuadTableToFile( const char * FileName )
 {
     FILE * fp;
@@ -274,4 +244,26 @@ void WriteQuadTableToFile( const char * FileName )
     fclose(fp);
 }
 
-/********************************上面:四元式的定义和函数****************************/
+int Gen( int Op, int Arg1, int Arg2, int Arg3, char *Arg1Name, char *Arg2Name, char *Arg3Name )
+{
+    struct Quadruple * ptr; 
+    int incr = 100;
+    if( QuadTable.len >= QuadTable.size ) {
+        ptr = realloc( QuadTable.base, QuadTable.size+incr );
+        if( ptr==NULL ) return -1;
+        QuadTable.base = ptr;
+        QuadTable.size += incr;
+    }
+    ptr = & QuadTable.base[QuadTable.len];
+    ptr->op = Op;
+    ptr->arg1 = Arg1;
+    ptr->arg2 = Arg2;
+    ptr->arg3 = Arg3;
+    strcpy( ptr->arg1name, Arg1Name);
+    strcpy( ptr->arg2name, Arg2Name);
+    strcpy( ptr->arg3name, Arg3Name);
+    QuadTable.len++;
+
+    return QuadTable.len - 1;
+}
+
