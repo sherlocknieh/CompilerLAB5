@@ -15,6 +15,7 @@ int main()
     sum = 0;
 
     /* 表达式 */
+    price = price / i;
     price = price - i;
     sum = sum + (i * price);
     ch = ch + i;

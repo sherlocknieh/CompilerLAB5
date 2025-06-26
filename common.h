@@ -3,26 +3,26 @@
 #include <string.h>    // for strcpy, memset
 
 
+#define BOOL     0
 #define CHAR     1
 #define INT      2
 #define FLOAT    3
-#define BOOL     4
 
+#define BOOL_WIDTH  1
 #define CHAR_WIDTH  1
 #define INT_WIDTH   4
 #define FLOAT_WIDTH 8
-#define BOOL_WIDTH  1
 
 #define ID_MAX_LEN  64
 
-
-
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define TYPE_WIDTH(type) (type == INT ? INT_WIDTH : (type == FLOAT ? FLOAT_WIDTH : (type == BOOL ? BOOL_WIDTH : CHAR_WIDTH)))
 
 
 /*****************************符号表结构定义*******************************/
 /*符号节点*/
 struct Symbol {
-    char name[ ID_MAX_LEN + 1 ]; /*符号名(例如变量名)长度不超过 ID_MAX_LEN 个字符*/
+    char name[ID_MAX_LEN]; /*符号名(例如变量名)长度不超过 ID_MAX_LEN 个字符*/
     int  type;      /*类型名，例如 int, 这个程序只处理简单类型，在实际的编译器中，这里要建立树结构*/
     int  addr;      /*为该变量分配的空间的首地址*/
 	int  width;     /*该变量的宽度，即占用多少个字节*/
@@ -61,7 +61,7 @@ union ConstVal {
 
 /*常量节点*/
 struct ConstElem {
-    char str[ID_MAX_LEN + 1 ]; /*该变量用于存储常数的文本形式，演示的时候用的,实际的编译系统不需要*/	   
+    char str[ID_MAX_LEN]; /*该变量用于存储常数的文本形式，演示的时候用的,实际的编译系统不需要*/	   
     int type; /*用来存放类型名，例如int*/
     union ConstVal value;
     int  addr;      /*为该常量分配的空间的首地址*/
@@ -91,11 +91,13 @@ struct ConstElem * AddToConstList( char * Str, int ConstType, union ConstVal Con
 
 /*****************************四元式表结构定义*******************************/
 /* 操作码定义 */
+#define OUMINUS          1000
 /* 整型加减乘除 */
 #define OIntAdd          1001
 #define OIntSub          1002
 #define OIntMultiply     1003
 #define OIntDivide       1004
+
 
 /* 浮点数加减乘除 */
 #define OFloatAdd        1011
@@ -137,10 +139,13 @@ struct ConstElem * AddToConstList( char * Str, int ConstType, union ConstVal Con
 
 /*四元式*/
 struct Quadruple {
-    int op; /*运算符*/
-    int arg1; /*存放第一个参数的地址，可能是变量、临时变量的地址*/
+    int op;
+    int arg1;
     int arg2;
-    int arg3; /*存放第三个参数的地址，可能是变量、临时变量的地址，还可能是四元式的地址(Goto 的地址参数)*/
+    int result;
+    char name1[ID_MAX_LEN];
+    char name2[ID_MAX_LEN];
+    char namer[ID_MAX_LEN];
 };
 
 /*四元式表*/
@@ -155,7 +160,8 @@ struct QuadTable {
 void CreateQuadTable(int StartAddr);    /*创建四元式表*/
 void DestroyQuadTable( void );          /*销毁四元式表*/
 void WriteQuadTableToFile( const char * FileName ); /*将四元式表输出到文件*/
-int Gen(int Op, int Arg1, int Arg2, int Arg3); /*生成一个四元式到四元式表，并返回它的地址*/
+int GenQuadruple(int Op, int Arg1, int Arg2, int result, char name1[], char name2[], char namer[]);
+/*生成一个四元式到四元式表，并返回它的地址*/
 
 
 
@@ -164,11 +170,11 @@ int Gen(int Op, int Arg1, int Arg2, int Arg3); /*生成一个四元式到四元�
 /****************************属性栈元素结构定义******************************/
 union ParseStackNodeInfo{
     struct {
-        char name[ID_MAX_LEN + 1 ]; 
+        char name[ID_MAX_LEN]; 
     }id;  /*标识符:终结符ID的综合属性*/
 
     struct {
-	   char str[ID_MAX_LEN + 1 ]; /*该变量用于存储常数的文本形式，演示的时候用的,实际的编译系统不需要*/	   
+	   char str[ID_MAX_LEN]; /*该变量用于存储常数的文本形式，演示的时候用的,实际的编译系统不需要*/	   
        int type; /*用来存放类型名，例如INT*/
 	   union ConstVal value; /*常量：终结符CONST的信息*/
 	   int width;
@@ -179,12 +185,19 @@ union ParseStackNodeInfo{
     }basic; /*基本数据类型：终结符BASIC的综合属性*/
 
 	struct {
-	   char str[ID_MAX_LEN + 1 ]; /*该变量用于存储变量名、临时变量名或常数的文本形式，演示的时候用的,实际的编译系统不需要*/
+	   char str[ID_MAX_LEN]; /*该变量用于存储变量名、临时变量名或常数的文本形式，演示的时候用的,实际的编译系统不需要*/
 	   int type;
 	   int addr;
 	   int width;
 	} factor, term, expr;/*非终结符factor, term, expr的综合属性*/
     /*其它文法符号的属性记录可以在下面继续添加*/
+
+    struct {
+        int type;
+        int addr;
+        int width;
+    } stmt; // 语句(赋值, 选择, 循环)
+    
 };
 
 #define YYSTYPE union ParseStackNodeInfo 

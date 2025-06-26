@@ -199,13 +199,16 @@ void WriteQuadTableToFile( const char * FileName )
     FILE * fp;
     struct Quadruple * ptr;
     int i,op;
-    char str[1000],ch;
+    char str1[1000], str2[1000], ch;
     fp = fopen( FileName, "w" );
     if( fp==NULL ) return;
     for( i=0, ptr = TheQuadTable.base; i < TheQuadTable.len; i++,ptr++ ) {
         fprintf(fp, "%5d:  ", TheQuadTable.startaddr + i);
         op = ptr->op;
         switch( op ) {
+            case OUMINUS        : sprintf(str1, "[%d] = -[%d]", ptr->result, ptr->arg1); 
+                                  sprintf(str2, "%s\t=\t-%s", ptr->namer, ptr->name1); 
+                                  break;
             case OIntAdd        :
             case OIntSub        :
             case OIntMultiply   :
@@ -217,45 +220,88 @@ void WriteQuadTableToFile( const char * FileName )
                                   if( op==OIntSub || op==OFloatSub) ch = '-';
                                   if( op==OIntMultiply || op==OFloatMultiply) ch = '*';
                                   if( op==OIntDivide || op==OFloatDivide) ch = '/';
-                                  sprintf(str,"[%d] = [%d] %c [%d]", ptr->arg3, ptr->arg1, ch, ptr->arg2);
+                                  sprintf(str1,"[%d] = [%d] %c [%d]", ptr->result, ptr->arg1, ch, ptr->arg2);
+                                  sprintf(str2, "%s\t=\t%s\t%c\t%s", ptr->namer, ptr->name1, ch, ptr->name2);
                                   break;
             case OIntEvaluation   :
             case OFloatEvaluation :
             case OCharEvaluation  :
-            case OBoolEvaluation  : sprintf(str,"[%d] = [%d]", ptr->arg3, ptr->arg1);
+            case OBoolEvaluation  : sprintf(str1,"[%d] = [%d]", ptr->result, ptr->arg1);
+                                    sprintf(str2, "%s\t=\t%s", ptr->namer, ptr->name1);
                                     break;
-            case OGoto            : sprintf(str,"Goto %d", ptr->arg3);
+            case OGoto            : sprintf(str1,"Goto %d", ptr->result);
+                                    sprintf(str2, "Goto %s", ptr->namer);
                                     break;
-            case OGTGoto  : sprintf(str,"if [%d]>[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->arg3 );  break;
-            case OGEGoto  : sprintf(str,"if [%d]>=[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->arg3 ); break;
-            case OLTGoto  : sprintf(str,"if [%d]<[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->arg3 );  break;
-            case OLEGoto  : sprintf(str,"if [%d]<=[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->arg3 ); break;
-            case OEQGoto  : sprintf(str,"if [%d]==[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->arg3 ); break;
-            case ONEQGoto : sprintf(str,"if [%d]<>[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->arg3 ); break;
+            case OGTGoto  : sprintf(str1,"if [%d]>[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->result );
+                            sprintf(str2, "if %s > %s Goto %s", ptr->name1, ptr->name2, ptr->namer);
+                            break;
+            case OGEGoto  : sprintf(str1,"if [%d]>=[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->result );
+                            sprintf(str2, "if %s >= %s Goto %s", ptr->name1, ptr->name2, ptr->namer);
+                            break;
+            case OLTGoto  : sprintf(str1,"if [%d]<[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->result );
+                            sprintf(str2, "if %s < %s Goto %s", ptr->name1, ptr->name2, ptr->namer);
+                            break;
+            case OLEGoto  : sprintf(str1,"if [%d]<=[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->result );
+                            sprintf(str2, "if %s <= %s Goto %s", ptr->name1, ptr->name2, ptr->namer);
+                            break;
+            case OEQGoto  : sprintf(str1,"if [%d]==[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->result );
+                            sprintf(str2, "if %s == %s Goto %s", ptr->name1, ptr->name2, ptr->namer);
+                            break;
+            case ONEQGoto : sprintf(str1,"if [%d]<>[%d] Goto %d", ptr->arg1, ptr->arg2, ptr->result );
+                            sprintf(str2, "if %s != %s Goto %s", ptr->name1, ptr->name2, ptr->namer);
+                            break;
 
-            case OCharToInt   : sprintf( str,"[%d] = (int) [%d]",   ptr->arg3, ptr->arg1 );  break;
-            case OCharToFloat : sprintf( str,"[%d] = (float) [%d]", ptr->arg3, ptr->arg1 );  break;
-            case OIntToFloat  : sprintf( str,"[%d] = (float) [%d]", ptr->arg3, ptr->arg1 );  break;
-            case OIntToChar   : sprintf( str,"[%d] = (char) [%d]",  ptr->arg3, ptr->arg1 );  break;
-            case OFloatToChar : sprintf( str,"[%d] = (char) [%d]",  ptr->arg3, ptr->arg1 );  break;
-            case OFloatToInt  : sprintf( str,"[%d] = (int) [%d]",   ptr->arg3, ptr->arg1 );  break;
+            case OCharToInt   : sprintf(str1, "[%d] = (int) [%d]",   ptr->result, ptr->arg1 );
+                                sprintf(str2, "%s = (int) %s", ptr->namer, ptr->name1);
+                                break;
+            case OCharToFloat : sprintf(str1, "[%d] = (float) [%d]", ptr->result, ptr->arg1 );  
+                                sprintf(str2, "%s = (float) %s", ptr->namer, ptr->name1);
+                                break;
+            case OIntToFloat  : sprintf(str1, "[%d] = (float) [%d]", ptr->result, ptr->arg1 );
+                                sprintf(str2, "%s = (float) %s", ptr->namer, ptr->name1);
+                                break;
+            case OIntToChar   : sprintf(str1, "[%d] = (char) [%d]",  ptr->result, ptr->arg1 ); 
+                                sprintf(str2, "%s = (char) %s", ptr->namer, ptr->name1);
+                                break;
+            case OFloatToChar : sprintf(str1, "[%d] = (char) [%d]",  ptr->result, ptr->arg1 );  
+                                sprintf(str2, "%s = (char) %s", ptr->namer, ptr->name1);
+                                break;
+            case OFloatToInt  : sprintf(str1, "[%d] = (int) [%d]",   ptr->result, ptr->arg1 );  
+                                sprintf(str2, "%s = (int) %s", ptr->namer, ptr->name1);
+                                break;
+            case OCharToBool   : sprintf(str1, "[%d] = (bool) [%d]",  ptr->result, ptr->arg1 );  
+                                 sprintf(str2, "%s = (bool) %s", ptr->namer, ptr->name1);
+                                 break;
+            case OIntToBool    : sprintf(str1, "[%d] = (bool) [%d]",  ptr->result, ptr->arg1 );  
+                                 sprintf(str2, "%s = (bool) %s", ptr->namer, ptr->name1);
+                                 break;
+            case OFloatToBool  : sprintf(str1, "[%d] = (bool) [%d]",  ptr->result, ptr->arg1 );  
+                                 sprintf(str2, "%s = (bool) %s", ptr->namer, ptr->name1);
+                                 break;
+            case OBoolToChar   : sprintf(str1, "[%d] = (char) [%d]",  ptr->result, ptr->arg1 );  
+                                 sprintf(str2, "%s = (char) %s", ptr->namer, ptr->name1);
+                                 break;
+            case OBoolToInt    : sprintf(str1, "[%d] = (int) [%d]",   ptr->result, ptr->arg1 );  
+                                 sprintf(str2, "%s = (int) %s", ptr->namer, ptr->name1);
+                                 break;
+            case OBoolToFloat  : sprintf(str1, "[%d] = (float) [%d]", ptr->result, ptr->arg1 );  
+                                 sprintf(str2, "%s = (float) %s", ptr->namer, ptr->name1);
+                                 break;
 
-            case OCharToBool   : sprintf( str,"[%d] = (bool) [%d]",  ptr->arg3, ptr->arg1 );  break;
-            case OIntToBool    : sprintf( str,"[%d] = (bool) [%d]",  ptr->arg3, ptr->arg1 );  break;
-            case OFloatToBool  : sprintf( str,"[%d] = (bool) [%d]",  ptr->arg3, ptr->arg1 );  break;
-            case OBoolToChar   : sprintf( str,"[%d] = (char) [%d]",  ptr->arg3, ptr->arg1 );  break;
-            case OBoolToInt    : sprintf( str,"[%d] = (int) [%d]",   ptr->arg3, ptr->arg1 );  break;
-            case OBoolToFloat  : sprintf( str,"[%d] = (float) [%d]", ptr->arg3, ptr->arg1 );  break;
-
-            default: yyerror("程序错误：出现不认识的运算符！"); strcpy(str, "error: Unknown operator");break;
+            default: yyerror("程序错误：出现不认识的运算符！"); strcpy(str1, "error: Unknown operator");break;
         }
-        fprintf(fp,"%s\n",str);
+        // 生成 40 - strlen(str1) 个空格
+        int i = strlen(str1);
+        for(; i < 30; i++ ) {
+            strcat(str1, " ");
+        }
+        fprintf(fp,"%s |       %s\n",str1, str2);
     }
 
     fclose(fp);
 }
 
-int Gen( int Op, int Arg1, int Arg2, int Arg3)
+int GenQuadruple( int Op, int Arg1, int Arg2, int result, char name1[], char name2[], char namer[] )
 {
     struct Quadruple * ptr; 
     int incr = 100;
@@ -266,10 +312,14 @@ int Gen( int Op, int Arg1, int Arg2, int Arg3)
         TheQuadTable.size += incr;
     }
     ptr = & TheQuadTable.base[TheQuadTable.len];
+
     ptr->op = Op;
     ptr->arg1 = Arg1;
     ptr->arg2 = Arg2;
-    ptr->arg3 = Arg3;
+    ptr->result = result;
+    strcpy(ptr->name1, name1);
+    strcpy(ptr->name2, name2);
+    strcpy(ptr->namer, namer);
     TheQuadTable.len++;
 
     return TheQuadTable.len - 1;

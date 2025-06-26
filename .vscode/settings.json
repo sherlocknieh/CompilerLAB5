@@ -21,6 +21,11 @@
         "io.h": "c",
         "unistd.h": "c",
         "common.h": "c",
-        "y.tab.h": "c"
+        "y.tab.h": "c",
+        "bit": "c",
+        "cmath": "c",
+        "concepts": "c",
+        "limits": "c",
+        "new": "c"
     }
 }
